@@ -1,27 +1,6 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:5.7
-    environment:
-      MYSQL_ROOT_PASSWORD: cmu65
-      MYSQL_DATABASE: trippify
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./mysql-data:/var/lib/mysql
-    networks:
-      - backend-network
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: phpmyadmin-server
-    environment:
-      PMA_HOST: mysql
-    ports:
-      - "8080:80"
-    networks:
-      - backend-network
   backend:
     build:
       context: .
@@ -35,8 +14,6 @@ services:
       - .:/app
       - /app/node_modules
     working_dir: /app
-    depends_on:
-      - mysql
     networks:
       - backend-network
     command: npm run dev
