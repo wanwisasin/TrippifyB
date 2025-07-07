@@ -9,5 +9,7 @@ const isAuthenticated = (req, res, next) => {
 
 router.post('/', tripController.generateTripPlan); // ถ้ามี
 router.post('/save', isAuthenticated, tripController.saveTripPlan);
+router.post('/:tripId/join', isAuthenticated, tripController.joinTrip);
+router.get('/:tripId', isAuthenticated, tripController.getTripDetail);
 
 module.exports = router;
