@@ -58,6 +58,10 @@ You MUST return ONLY a valid JSON object or array as the entire response.
 - DO NOT include markdown or code blocks.
 - The response MUST start with "{" and end with "}" or start with "[" and end with "]".
 - If you cannot produce a valid JSON for any reason, reply with an empty JSON object "{}" and nothing else.
+
+Return only pure JSON. Do not include any markdown fences or extra explanation.
+If you want to return nothing, just return "{}".
+
 `;
 };
 
