@@ -8,19 +8,22 @@ exports.generateTripPlan = async (req, res) => {
     res.json(plan);
   } catch (err) {
     console.error('Gemini API error:', err);
-    res.status(500).json({ error: 'Failed to generate trip plan.' });
+    res.status(500).json({ code: 'GEMINI_ERROR', message: 'Failed to generate trip plan.' });
   }
 };
 exports.saveTripPlan = async (req, res) => {
   try {
-    const userId = req.user.user_id; // ดึง user id จาก session/passport
+    const userId = req.user?.user_id;
     const tripData = req.body;
 
     if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Please login first.' });
     }
 
-    // บันทึก trip plan ลง db
+    if (!tripData) {
+      return res.status(400).json({ code: 'NO_DATA', message: 'Missing trip data.' });
+    }
+
     const result = await tripModel.saveTripPlan(tripData, userId);
 
     return res.status(201).json({
@@ -29,7 +32,7 @@ exports.saveTripPlan = async (req, res) => {
     });
   } catch (err) {
     console.error('Error saving trip:', err);
-    return res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ code: 'SAVE_ERROR', message: 'Internal server error' });
   }
 };
 exports.joinTrip = async (req, res) => {
@@ -55,13 +58,20 @@ exports.joinTrip = async (req, res) => {
 exports.getTripDetail = async (req, res) => {
   try {
     const tripId = req.params.tripId;
-    const trip = await tripModel.getTripById(tripId);
-    if (!trip) {
-      return res.status(404).json({ message: 'Trip not found' });
+
+    if (!tripId) {
+      return res.status(400).json({ code: 'NO_TRIP_ID', message: 'Trip ID is required.' });
     }
-    res.json(trip);
+
+    const trip = await tripModel.getTripById(tripId);
+
+    if (!trip) {
+      return res.status(404).json({ code: 'TRIP_NOT_FOUND', message: 'Trip not found.' });
+    }
+
+    res.status(200).json(trip);
   } catch (err) {
     console.error('Get trip detail error:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ code: 'DETAIL_ERROR', message: 'Internal server error' });
   }
 };
