@@ -158,3 +158,20 @@ exports.getTripById = async (tripId) => {
     conn.release();
   }
 };
+
+exports.getTripsByUser = async (userId) => {
+  const [rows] = await db.execute(
+    `SELECT id, trip_name, currency, total_trip_cost, created_at
+     FROM trips WHERE user_id = ?
+     ORDER BY created_at DESC`,
+    [userId]
+  );
+  return rows.map((row) => ({
+    _id: row.id,  // frontend ใช้ trip._id
+    tripName: row.trip_name,
+    currency: row.currency,
+    total_trip_cost: row.total_trip_cost,
+    createdAt: row.created_at
+  }));
+};
+
