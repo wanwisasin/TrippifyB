@@ -2,6 +2,8 @@ const express = require('express');
 const passport = require('passport');
 const session = require('express-session');
 const cors = require('cors');
+const tripRoutes = require('./routes/tripRoutes')
+
 require('dotenv').config();
 require('./config/passport');
 
@@ -29,5 +31,6 @@ app.use(passport.session());
 
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/api/trip', require('./routes/tripRoutes'));
+app.use('/api/trip', tripRoutes);
 
 module.exports = app;

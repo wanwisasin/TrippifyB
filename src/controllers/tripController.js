@@ -75,3 +75,20 @@ exports.getTripDetail = async (req, res) => {
     res.status(500).json({ code: 'DETAIL_ERROR', message: 'Internal server error' });
   }
 };
+
+exports.getUserTrips = async (req, res) => {
+  try {
+    const userId = req.user?.user_id;
+
+    if (!userId) {
+      return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Not logged in' });
+    }
+
+    const trips = await tripModel.getTripsByUser(userId); // 👈 ฟังก์ชันนี้ต้องเขียนใน model
+
+    return res.status(200).json(trips);
+  } catch (err) {
+    console.error('Get user trips error:', err);
+    return res.status(500).json({ message: 'Failed to fetch user trips' });
+  }
+};

@@ -7,9 +7,10 @@ const isAuthenticated = (req, res, next) => {
   return res.status(403).json({ error: 'forbidden' });
 };
 
+router.get('/mine', isAuthenticated, tripController.getUserTrips);
 router.post('/', tripController.generateTripPlan);
 router.post('/save', isAuthenticated, tripController.saveTripPlan);
-router.post('/:tripId/join', isAuthenticated, tripController.joinTrip);
 router.get('/:tripId', isAuthenticated, tripController.getTripDetail);
+router.post('/:tripId/join', isAuthenticated, tripController.joinTrip);
 
 module.exports = router;
