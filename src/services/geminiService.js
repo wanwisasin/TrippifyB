@@ -40,7 +40,9 @@ Please follow these guidelines:
    - currency: Use the specified currency
    - category: Type of place (e.g., temple, cafe, nature, shopping)
    - google_maps_url: Link to Google Maps
-   - lat and lng: Coordinates (if available)
+   - lat: Latitude of the place
+   - lng: Longitude of the place
+   - lat and lng: Latitude and longitude coordinates. These are required to enable nearby place suggestions.
 
 5. Include a list of 1-3 useful daily travel tips (e.g., what to bring, when to avoid traffic)
 6. Calculate and include:
