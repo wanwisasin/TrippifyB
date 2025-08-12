@@ -31,6 +31,118 @@ exports.saveTripPlan = async (tripData, userId) => {
     );
     const tripId = tripResult.insertId;
 
+    // ตรวจสอบว่า user เป็นเจ้าของ trip หรือไม่
+exports.checkTripOwner = async (tripId, userId) => {
+  const [rows] = await db.execute(
+    `SELECT user_id FROM trips WHERE id = ?`,
+    [tripId]
+  );
+  return rows.length > 0 && rows[0].user_id === userId;
+};
+
+// อัปเดต trip ที่มีอยู่
+exports.updateTripPlan = async (tripId, tripData, userId) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // อัปเดตข้อมูลหลักของ trip
+    await conn.execute(
+      `UPDATE trips 
+       SET trip_name = ?, currency = ?, total_trip_cost = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [
+        safeParam(tripData.tripName, 'My Trip'),
+        safeParam(tripData.currency, 'THB'),
+        safeParam(tripData.total_trip_cost, 0),
+        tripId
+      ]
+    );
+
+    // ลบข้อมูล transport เดิม
+    await conn.execute(
+      `DELETE FROM transport_info WHERE trip_id = ?`,
+      [tripId]
+    );
+
+    // บันทึก transport ใหม่
+    const transport = tripData.transport_info || {};
+    for (const mode of ['car', 'bus', 'train', 'flight']) {
+      if (transport[mode]) {
+        const dist = parseDistance(transport[mode].distance);
+        await conn.execute(
+          `INSERT INTO transport_info (trip_id, mode, distance, duration, created_at)
+           VALUES (?, ?, ?, ?, NOW())`,
+          [
+            tripId,
+            mode,
+            dist,
+            safeParam(transport[mode].duration, '')
+          ]
+        );
+      }
+    }
+
+    // ลบ days และ locations เดิม
+    const [days] = await conn.execute(
+      `SELECT id FROM trip_days WHERE trip_id = ?`,
+      [tripId]
+    );
+    
+    for (const day of days) {
+      await conn.execute(
+        `DELETE FROM trip_locations WHERE day_id = ?`,
+        [day.id]
+      );
+    }
+    
+    await conn.execute(
+      `DELETE FROM trip_days WHERE trip_id = ?`,
+      [tripId]
+    );
+
+    // บันทึก days และ locations ใหม่
+    for (const [i, day] of (tripData.days || []).entries()) {
+      const [dayResult] = await conn.execute(
+        `INSERT INTO trip_days (trip_id, day_number, title, date, description, total_day_cost, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          tripId,
+          i + 1,
+          safeParam(day.title, `Day ${i + 1}`),
+          safeParam(day.date),
+          safeParam(day.description || day.narrative, ''),
+          safeParam(day.total_day_cost, 0)
+        ]
+      );
+      const dayId = dayResult.insertId;
+
+      for (const loc of day.locations || []) {
+        await conn.execute(
+          `INSERT INTO trip_locations (day_id, name, category, transport, estimated_cost, currency, distance_to_next, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [
+            dayId,
+            safeParam(loc.name),
+            safeParam(loc.category),
+            safeParam(loc.transport),
+            safeParam(loc.estimated_cost, 0),
+            safeParam(loc.currency, tripData.currency || 'THB'),
+            parseDistance(loc.distance_to_next)
+          ]
+        );
+      }
+    }
+
+    await conn.commit();
+    return { tripId };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
     // 🚍 Save transport summary
     const transport = tripData.transport_info || {};
     for (const mode of ['car', 'bus', 'train', 'flight']) {

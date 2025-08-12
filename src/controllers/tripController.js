@@ -35,6 +35,29 @@ exports.saveTripPlan = async (req, res) => {
     return res.status(500).json({ code: 'SAVE_ERROR', message: 'Internal server error' });
   }
 };
+exports.updateTripPlan = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const tripId = req.params.tripId;
+    const tripData = req.body;
+
+    // ตรวจสอบว่า trip นี้เป็นของ user นี้หรือไม่
+    const isOwner = await tripModel.checkTripOwner(tripId, userId);
+    if (!isOwner) {
+      return res.status(403).json({ code: 'FORBIDDEN', message: 'You are not the owner of this trip' });
+    }
+
+    const result = await tripModel.updateTripPlan(tripId, tripData, userId);
+
+    return res.status(200).json({
+      message: 'Trip updated successfully',
+      tripId: result.tripId,
+    });
+  } catch (err) {
+    console.error('Error updating trip:', err);
+    return res.status(500).json({ code: 'UPDATE_ERROR', message: 'Internal server error' });
+  }
+};
 exports.joinTrip = async (req, res) => {
   try {
     const userId = req.user.user_id;
