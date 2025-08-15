@@ -24,7 +24,12 @@ exports.saveTripPlan = async (req, res) => {
       return res.status(400).json({ code: 'NO_DATA', message: 'Missing trip data.' });
     }
 
-    const result = await tripModel.saveTripPlan(tripData, userId);
+    const result = await tripModel.saveTripPlan({
+  ...tripData,
+  trip_type: tripData.trip_type || 'solo',         // solo หรือ group
+  group_size: tripData.trip_type === 'group' ? tripData.group_size : null
+}, userId);
+
 
     return res.status(201).json({
       message: 'Trip saved successfully',
@@ -47,7 +52,11 @@ exports.updateTripPlan = async (req, res) => {
       return res.status(403).json({ code: 'FORBIDDEN', message: 'You are not the owner of this trip' });
     }
 
-    const result = await tripModel.updateTripPlan(tripId, tripData, userId);
+const result = await tripModel.updateTripPlan(tripId, {
+  ...tripData,
+  trip_type: tripData.trip_type || 'solo',
+  group_size: tripData.trip_type === 'group' ? tripData.group_size : null
+}, userId);
 
     return res.status(200).json({
       message: 'Trip updated successfully',

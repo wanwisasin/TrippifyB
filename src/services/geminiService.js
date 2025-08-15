@@ -8,10 +8,12 @@ Plan a travel itinerary from ${data.from} to ${data.to}
 Travel dates: from ${data.startDate} to ${data.endDate}  
 Total budget: ${data.budget} ${data.currency || 'USD'}  
 Preferred mode of travel: ${data.travelType}  
-Traveler's interests: ${data.preferences.join(', ') || 'None'}
+Traveler's interests: ${data.preferences.join(', ') || 'general'}
 Trip name: ${data.tripName}
 
-Please follow these guidelines:
+⚠️ Include the type of trip and group size in the returned JSON:
+"trip_type": "${data.trip_type}",      // "solo" or "group"
+"group_size": ${data.group_size || null} // number if group, null if solo
 
 1. Provide a travel summary object named "transport_info" that estimates distance and travel time from "${data.from}" to "${data.to}" using each transportation method: "car", "bus", "train", "flight".
    - If a method is unavailable, use null.
@@ -24,49 +26,23 @@ Please follow these guidelines:
      }
 
 2. Divide the trip into daily plans (Day 1, Day 2, etc.)
-  ⚠️ Return the daily plan array under the property name **"days"** instead of "trip_plan".
-  
+   ⚠️ Return the daily plan array under the property name "days".
+
 3. For each day, include:
-   - Date in YYYY-MM-DD format
-   - A short title (title) describing the theme of the day
-   - A brief narrative description (1-2 sentences) to set the mood of the day
+   - date in YYYY-MM-DD format
+   - title describing the theme of the day
+   - description (1-2 sentences)
+   - locations (name, time, transport, estimated_cost, currency, category, google_maps_url, lat, lng)
+   - daily travel tips (1-3 items)
+   - total_day_cost
 
-4. For each day, provide the list of locations under the key "locations". DO NOT use any other key name.
-   - name: Name of the place
-   - time: Estimated time spent (e.g., "09:00-10:30")
-   - transport: Use only generic transportation terms such as "walk", "motorcycle taxi", "local taxi", "public van", etc.
-    ⚠️ DO NOT mention any brand names, company names, or specific service names like "Grab", "MRT", "BTS", or any similar.
-   - estimated_cost: Approximate cost to visit (entrance fee, transportation)
-   - currency: Use the specified currency
-   - category: Type of place (e.g., temple, cafe, nature, shopping)
-   - google_maps_url: Link to Google Maps
-   - lat: Latitude of the place
-   - lng: Longitude of the place
-   - lat and lng: Latitude and longitude coordinates. These are required to enable nearby place suggestions.
+4. Include total_trip_cost for the entire trip
+5. Include tripName
 
-5. Include a list of 1-3 useful daily travel tips (e.g., what to bring, when to avoid traffic)
-6. Calculate and include:
-   - total_day_cost: Daily total cost
-   - total_trip_cost: Total for the whole trip
-
-7. Include a trip name under the key "tripName" that briefly summarizes the theme of the trip.
-
-Escape all double quotes in strings correctly.
-
-IMPORTANT:
-
-You MUST return ONLY a valid JSON object or array as the entire response. 
-- DO NOT include any explanation, greeting, apology, or additional text outside of the JSON.
-- DO NOT include markdown or code blocks.
-- The response MUST start with "{" and end with "}" or start with "[" and end with "]".
-- If you cannot produce a valid JSON for any reason, reply with an empty JSON object "{}" and nothing else.
-
-Return only pure JSON. Do not include any markdown fences or extra explanation.
-If you want to return nothing, just return "{}".
-
+Escape all double quotes correctly.
+Return ONLY a valid JSON object starting with "{" and ending with "}", nothing else.
 `;
 };
-
 
 const callGeminiAPI = async (tripData) => {
   const prompt = generateTripPrompt(tripData);
@@ -79,10 +55,10 @@ const callGeminiAPI = async (tripData) => {
 
   // ✅ ล้าง markdown ถ้ามี
   const cleanText = text
-   .replace(/```json|```/g, '')
-      .replace(/[\r\n]+/g, ' ')
-      .replace(/(\w):(\s*")/g, '"$1":$2') // Fix missing quotes around keys
-      .trim();
+    .replace(/```json|```/g, '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/(\w):(\s*")/g, '"$1":$2') // Fix missing quotes around keys
+    .trim();
 
   try {
     return JSON.parse(cleanText);

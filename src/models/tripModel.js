@@ -18,18 +18,20 @@ exports.saveTripPlan = async (tripData, userId) => {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+const [tripResult] = await conn.execute(
+  `INSERT INTO trips (user_id, trip_name, currency, total_trip_cost, trip_type, group_size, created_at, updated_at)
+   VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+  [
+    safeParam(userId),
+    safeParam(tripData.tripName, 'My Trip'),
+    safeParam(tripData.currency, 'THB'),
+    safeParam(tripData.total_trip_cost, 0),
+    safeParam(tripData.trip_type, 'solo'),   // จะเป็น 'solo' หรือ 'group' ตามที่ user เลือก
+    safeParam(tripData.group_size, null)     // ถ้า solo = null, ถ้า group = จำนวนคน
+  ]
+);
 
-    const [tripResult] = await conn.execute(
-      `INSERT INTO trips (user_id, trip_name, currency, total_trip_cost, created_at, updated_at)
-       VALUES (?, ?, ?, ?, NOW(), NOW())`,
-      [
-        safeParam(userId),
-        safeParam(tripData.tripName, 'My Trip'),
-        safeParam(tripData.currency, 'THB'),
-        safeParam(tripData.total_trip_cost, 0)
-      ]
-    );
-    const tripId = tripResult.insertId;
+const tripId = tripResult.insertId;
 
     // ตรวจสอบว่า user เป็นเจ้าของ trip หรือไม่
 exports.checkTripOwner = async (tripId, userId) => {
@@ -47,17 +49,19 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
     await conn.beginTransaction();
 
     // อัปเดตข้อมูลหลักของ trip
-    await conn.execute(
-      `UPDATE trips 
-       SET trip_name = ?, currency = ?, total_trip_cost = ?, updated_at = NOW()
-       WHERE id = ?`,
-      [
-        safeParam(tripData.tripName, 'My Trip'),
-        safeParam(tripData.currency, 'THB'),
-        safeParam(tripData.total_trip_cost, 0),
-        tripId
-      ]
-    );
+   await conn.execute(
+  `UPDATE trips 
+   SET trip_name = ?, currency = ?, total_trip_cost = ?, trip_type = ?, group_size = ?, updated_at = NOW()
+   WHERE id = ?`,
+  [
+    safeParam(tripData.tripName, 'My Trip'),
+    safeParam(tripData.currency, 'THB'),
+    safeParam(tripData.total_trip_cost, 0),
+    safeParam(tripData.trip_type, 'solo'),
+    safeParam(tripData.group_size, null),
+    tripId
+  ]
+);
 
     // ลบข้อมูล transport เดิม
     await conn.execute(
@@ -226,13 +230,15 @@ exports.getTripById = async (tripId) => {
   const conn = await db.getConnection();
   try {
     const [tripRows] = await conn.execute(
-      `SELECT id, trip_name, currency, total_trip_cost
-       FROM trips WHERE id = ?`,
-      [tripId]
-    );
+  `SELECT id, trip_name, currency, total_trip_cost, trip_type, group_size
+   FROM trips WHERE id = ?`,
+  [tripId]
+);
+
     if (tripRows.length === 0) return null;
 
     const trip = tripRows[0];
+trip.trip_type = tripRows[0].trip_type;
 
     const [dayRows] = await conn.execute(
       `SELECT id, day_number, title, date, description, total_day_cost
@@ -273,17 +279,20 @@ exports.getTripById = async (tripId) => {
 
 exports.getTripsByUser = async (userId) => {
   const [rows] = await db.execute(
-    `SELECT id, trip_name, currency, total_trip_cost, created_at
+    `SELECT id, trip_name, currency, total_trip_cost, created_at, trip_type
      FROM trips WHERE user_id = ?
      ORDER BY created_at DESC`,
     [userId]
   );
-  return rows.map((row) => ({
-    _id: row.id,  // frontend ใช้ trip._id
-    tripName: row.trip_name,
-    currency: row.currency,
-    total_trip_cost: row.total_trip_cost,
-    createdAt: row.created_at
-  }));
+return rows.map((row) => ({
+  _id: row.id,
+  tripName: row.trip_name,
+  currency: row.currency,
+  total_trip_cost: row.total_trip_cost,
+  createdAt: row.created_at,
+  trip_type: row.trip_type,
+  group_size: row.group_size
+}));
+
 };
 
