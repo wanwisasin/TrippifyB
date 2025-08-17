@@ -26,7 +26,7 @@ exports.saveTripPlan = async (req, res) => {
 
     const result = await tripModel.saveTripPlan({
   ...tripData,
-  trip_type: tripData.trip_type || 'solo',         // solo หรือ group
+  trip_type: tripData.trip_type || 'solo',        
   group_size: tripData.trip_type === 'group' ? tripData.group_size : null
 }, userId);
 

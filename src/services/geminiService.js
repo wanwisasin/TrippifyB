@@ -31,7 +31,8 @@ Trip name: ${data.tripName}
 3. For each day, include:
    - date in YYYY-MM-DD format
    - title describing the theme of the day
-   - description (1-2 sentences)
+   - description (1-2 sentences) 
+   and Explain why it is appropriate for the type of trip or number of travelers. Include it in the description. (short sentences)
    - locations (name, time, transport, estimated_cost, currency, category, google_maps_url, lat, lng)
    - daily travel tips (1-3 items)
    - total_day_cost
