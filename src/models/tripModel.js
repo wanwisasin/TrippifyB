@@ -42,34 +42,31 @@ exports.saveTripPlan = async (tripData, userId) => {
       return rows.length > 0 && rows[0].user_id === userId;
     };
 
-    // อัปเดต trip ที่มีอยู่
     exports.updateTripPlan = async (tripId, tripData, userId) => {
       const conn = await db.getConnection();
       try {
         await conn.beginTransaction();
 
-        // อัปเดตข้อมูลหลักของ trip
+        // 1. อัปเดตข้อมูลหลัก
         await conn.execute(
           `UPDATE trips 
-   SET trip_name = ?, currency = ?, total_trip_cost = ?, trip_type = ?, group_size = ?, updated_at = NOW()
-   WHERE id = ?`,
+       SET trip_name = ?, currency = ?, total_trip_cost = ?, trip_type = ?, group_size = ?, updated_at = NOW()
+       WHERE id = ? AND user_id = ?`,
           [
             safeParam(tripData.tripName, 'My Trip'),
             safeParam(tripData.currency, 'THB'),
             safeParam(tripData.total_trip_cost, 0),
             safeParam(tripData.trip_type, 'solo'),
             safeParam(tripData.group_size, null),
-            tripId
+            tripId,
+            userId
           ]
         );
 
-        // ลบข้อมูล transport เดิม
-        await conn.execute(
-          `DELETE FROM transport_info WHERE trip_id = ?`,
-          [tripId]
-        );
+        // 2. ลบ transport เดิม
+        await conn.execute(`DELETE FROM transport_info WHERE trip_id = ?`, [tripId]);
 
-        // บันทึก transport ใหม่
+        // 3. บันทึก transport ใหม่
         const transport = tripData.transport_info || {};
         for (const mode of ['car', 'bus', 'train', 'flight']) {
           if (transport[mode]) {
@@ -77,54 +74,40 @@ exports.saveTripPlan = async (tripData, userId) => {
             await conn.execute(
               `INSERT INTO transport_info (trip_id, mode, distance, duration, created_at)
            VALUES (?, ?, ?, ?, NOW())`,
-              [
-                tripId,
-                mode,
-                dist,
-                safeParam(transport[mode].duration, '')
-              ]
+              [tripId, mode, dist, safeParam(transport[mode].duration, '')]
             );
           }
         }
 
-        // ลบ days และ locations เดิม
-        const [days] = await conn.execute(
-          `SELECT id FROM trip_days WHERE trip_id = ?`,
-          [tripId]
-        );
-
+        // 4. ลบ days + locations เดิม
+        const [days] = await conn.execute(`SELECT id FROM trip_days WHERE trip_id = ?`, [tripId]);
         for (const day of days) {
-          await conn.execute(
-            `DELETE FROM trip_locations WHERE day_id = ?`,
-            [day.id]
-          );
+          await conn.execute(`DELETE FROM trip_locations WHERE day_id = ?`, [day.id]);
         }
+        await conn.execute(`DELETE FROM trip_days WHERE trip_id = ?`, [tripId]);
 
-        await conn.execute(
-          `DELETE FROM trip_days WHERE trip_id = ?`,
-          [tripId]
-        );
-
-        // บันทึก days และ locations ใหม่
+        // 5. บันทึก days + locations ใหม่
         for (const [i, day] of (tripData.days || []).entries()) {
           const [dayResult] = await conn.execute(
-            `INSERT INTO trip_days (trip_id, day_number, title, date, description, total_day_cost, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+            `INSERT INTO trip_days (trip_id, day_number, title, date, description, total_day_cost, daily_tips, created_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
             [
               tripId,
               i + 1,
               safeParam(day.title, `Day ${i + 1}`),
               safeParam(day.date),
               safeParam(day.description || day.narrative, ''),
-              safeParam(day.total_day_cost, 0)
+              safeParam(day.total_day_cost, 0),
+              JSON.stringify(safeParam(day.daily_tips, []))
             ]
           );
+
           const dayId = dayResult.insertId;
 
           for (const loc of day.locations || []) {
             await conn.execute(
-              `INSERT INTO trip_locations (day_id, name, category, transport, estimated_cost, currency,google_maps_url,lat,lng, distance_to_next, created_at)
- VALUES (?, ?, ?, ?, ?, ?, ? ,?,?, ?, NOW())`,
+              `INSERT INTO trip_locations (day_id, name, category, transport, estimated_cost, currency, google_maps_url, lat, lng, distance_to_next, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 dayId,
                 safeParam(loc.name),
@@ -150,6 +133,7 @@ exports.saveTripPlan = async (tripData, userId) => {
         conn.release();
       }
     };
+
     // 🚍 Save transport summary
     const transport = tripData.transport_info || {};
     for (const mode of ['car', 'bus', 'train', 'flight']) {
@@ -171,17 +155,23 @@ exports.saveTripPlan = async (tripData, userId) => {
     // 📅 Save trip days & locations
     for (const [i, day] of (tripData.days || []).entries()) {
       const [dayResult] = await conn.execute(
-        `INSERT INTO trip_days (trip_id, day_number, title, date, description, total_day_cost, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+        `INSERT INTO trip_days (trip_id, day_number, title, date, description, total_day_cost, daily_tips, created_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           tripId,
           i + 1,
           safeParam(day.title, `Day ${i + 1}`),
           safeParam(day.date),
           safeParam(day.description || day.narrative, ''),
-          safeParam(day.total_day_cost, 0)
+          safeParam(day.total_day_cost, 0),
+          JSON.stringify(
+            Array.isArray(day.daily_tips)
+              ? day.daily_tips
+              : (day.daily_tips ? [day.daily_tips] : [])
+          )
         ]
       );
+
       const dayId = dayResult.insertId;
 
       for (const loc of day.locations || []) {
@@ -233,39 +223,47 @@ exports.addMember = async (tripId, userId, role = 'member') => {
   );
 };
 
-// 📦 ดึงข้อมูล trip พร้อมวันและ location
 exports.getTripById = async (tripId) => {
   const conn = await db.getConnection();
   try {
-     const [tripRows] = await conn.execute(
+    const [tripRows] = await conn.execute(
       `SELECT id, trip_name, currency, total_trip_cost, trip_type, group_size, created_at, updated_at
        FROM trips WHERE id = ?`,
       [tripId]
     );
 
     if (tripRows.length === 0) return null;
-
     const trip = tripRows[0];
-    trip.trip_type = tripRows[0].trip_type;
 
+    // 📅 ดึง days
     const [dayRows] = await conn.execute(
-      `SELECT id, day_number, title, date, description, total_day_cost
+      `SELECT id, day_number, title, date, description, total_day_cost, daily_tips
        FROM trip_days WHERE trip_id = ? ORDER BY day_number`,
       [tripId]
     );
 
+    // 🏞️ ดึง locations ของแต่ละ day
     for (const day of dayRows) {
       const [locRows] = await conn.execute(
-        `SELECT id, name, category, transport, estimated_cost, currency, distance_to_next
+        `SELECT id, name, category, transport, estimated_cost, currency, google_maps_url, lat, lng, distance_to_next
          FROM trip_locations WHERE day_id = ?`,
         [day.id]
       );
       day.locations = locRows;
+
+      // parse daily_tips
+      if (day.daily_tips) {
+        try {
+          day.daily_tips = JSON.parse(day.daily_tips);
+        } catch {
+          day.daily_tips = [];
+        }
+      } else {
+        day.daily_tips = [];
+      }
     }
 
-    trip.days = dayRows;
-
-    // รวม transport info ด้วย
+    // 🚍 ดึง transport
     const [transportRows] = await conn.execute(
       `SELECT mode, distance, duration FROM transport_info WHERE trip_id = ?`,
       [tripId]
@@ -274,9 +272,12 @@ exports.getTripById = async (tripId) => {
     for (const t of transportRows) {
       transport_info[t.mode] = {
         distance: t.distance,
-        duration: t.duration
+        duration: t.duration,
       };
     }
+
+    // ✅ ประกอบทั้งหมดเข้าด้วยกัน
+    trip.days = dayRows;
     trip.transport_info = transport_info;
 
     return trip;
@@ -287,11 +288,12 @@ exports.getTripById = async (tripId) => {
 
 exports.getTripsByUser = async (userId) => {
   const [rows] = await db.execute(
-    `SELECT id, trip_name, currency, total_trip_cost, created_at, trip_type
+    `SELECT id, trip_name, currency, total_trip_cost, created_at, trip_type, group_size
      FROM trips WHERE user_id = ?
      ORDER BY created_at DESC`,
     [userId]
   );
+
   return rows.map((row) => ({
     _id: row.id,
     tripName: row.trip_name,
@@ -301,6 +303,5 @@ exports.getTripsByUser = async (userId) => {
     trip_type: row.trip_type,
     group_size: row.group_size
   }));
-
 };
 

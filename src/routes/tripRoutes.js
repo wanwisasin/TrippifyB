@@ -11,7 +11,6 @@ router.get('/mine', isAuthenticated, tripController.getUserTrips);
 router.post('/', tripController.generateTripPlan);
 router.post('/save', isAuthenticated, tripController.saveTripPlan);
 router.get('/:tripId', isAuthenticated, tripController.getTripDetail);
-router.post('/:tripId/join', isAuthenticated, tripController.joinTrip);
 router.put('/:tripId', isAuthenticated, tripController.updateTripPlan);
 
 module.exports = router;

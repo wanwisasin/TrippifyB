@@ -1,5 +1,6 @@
 const tripModel = require('../models/tripModel');
 const {callGeminiAPI} = require('../services/geminiService');
+const db = require('../utils/db');
 // 🔮 Generate Smart Trip Plan (Gemini)
 exports.generateTripPlan = async (req, res) => {
   try {
@@ -86,25 +87,21 @@ exports.joinTrip = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 exports.getTripDetail = async (req, res) => {
   try {
     const tripId = req.params.tripId;
-
-    if (!tripId) {
-      return res.status(400).json({ code: 'NO_TRIP_ID', message: 'Trip ID is required.' });
-    }
+    console.log("📌 tripId from request:", tripId);   // Debug ตรงนี้
 
     const trip = await tripModel.getTripById(tripId);
 
     if (!trip) {
-      return res.status(404).json({ code: 'TRIP_NOT_FOUND', message: 'Trip not found.' });
+      return res.status(404).json({ code: 'NOT_FOUND', message: 'Trip not found' });
     }
 
-    res.status(200).json(trip);
+    return res.status(200).json(trip);
   } catch (err) {
-    console.error('Get trip detail error:', err);
-    res.status(500).json({ code: 'DETAIL_ERROR', message: 'Internal server error' });
+    console.error('Error fetching trip detail:', err);
+    return res.status(500).json({ code: 'FETCH_ERROR', message: 'Internal server error' });
   }
 };
 
@@ -116,7 +113,7 @@ exports.getUserTrips = async (req, res) => {
       return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Not logged in' });
     }
 
-    const trips = await tripModel.getTripsByUser(userId); // 👈 ฟังก์ชันนี้ต้องเขียนใน model
+    const trips = await tripModel.getTripsByUser(userId);
 
     return res.status(200).json(trips);
   } catch (err) {
