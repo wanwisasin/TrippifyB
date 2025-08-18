@@ -34,7 +34,7 @@ Trip name: ${data.tripName}
    - description (1-2 sentences) 
    and Explain why it is appropriate for the type of trip or number of travelers. Include it in the description. (short sentences)
    - locations (name, time, transport, estimated_cost, currency, category, google_maps_url, lat, lng)
-   - daily travel tips (1-3 items)
+   - daily_tips (1-3 items)
    - total_day_cost
 
 4. Include total_trip_cost for the entire trip
