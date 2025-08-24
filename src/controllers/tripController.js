@@ -68,6 +68,34 @@ const result = await tripModel.updateTripPlan(tripId, {
     return res.status(500).json({ code: 'UPDATE_ERROR', message: 'Internal server error' });
   }
 };
+exports.saveOrUpdateTrip = async (req, res) => {
+  try {
+    const tripData = req.body;
+    const userId = req.user?.user_id;
+    let tripId = tripData.id
+    console.log("Received trip data:", tripData); // <<< ดูทั้งหมด 
+    console.log("Trip ID:", tripId || "(new trip)"); // <<< ตรวจสอบ tripId
+
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+
+    if (tripId) {
+      const result = await tripModel.updateTripPlan(tripData.tripId, tripData, userId);
+      tripId = result.id;
+      return res.json({ message: "Trip updated successfully", tripId });
+    } else {
+      // ✅ ไม่มี tripId → save ใหม่
+      const result = await tripModel.saveTripPlan(tripData, userId);
+      tripId = result.id;
+      return res.json({ message: "Trip saved successfully", tripId });
+    }
+  } catch (err) {
+    console.error("SaveOrUpdateTrip error:", err);
+    res.status(500).json({ message: "Failed to save or update trip" });
+  }
+};
+
+
 exports.joinTrip = async (req, res) => {
   try {
     const userId = req.user.user_id;

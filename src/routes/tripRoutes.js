@@ -9,8 +9,6 @@ const isAuthenticated = (req, res, next) => {
 
 router.get('/mine', isAuthenticated, tripController.getUserTrips);
 router.post('/', tripController.generateTripPlan);
-router.post('/save', isAuthenticated, tripController.saveTripPlan);
 router.get('/:tripId', isAuthenticated, tripController.getTripDetail);
-router.put('/:tripId', isAuthenticated, tripController.updateTripPlan);
-
+router.post("/saveOrUpdate", isAuthenticated, tripController.saveOrUpdateTrip);
 module.exports = router;
