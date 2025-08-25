@@ -204,21 +204,27 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
   try {
     await conn.beginTransaction();
 
-    // update main trip
-    await conn.execute(
-      `UPDATE trips 
-       SET trip_name=?, currency=?, total_trip_cost=?, trip_type=?, group_size=?, updated_at=NOW()
-       WHERE id=? AND user_id=?`,
-      [
-        safeParam(tripData.tripName, 'My Trip'),
-        safeParam(tripData.currency, 'THB'),
-        safeParam(tripData.total_trip_cost, 0),
-        safeParam(tripData.trip_type, 'solo'),
-        safeParam(tripData.group_size, null),
-        realTripId,
-        safeParam(userId)
-      ]
-    );
+await conn.execute(
+  `UPDATE trips 
+   SET 
+     trip_name = COALESCE(?, trip_name),
+     currency = COALESCE(?, currency),
+     total_trip_cost = COALESCE(?, total_trip_cost),
+     trip_type = COALESCE(?, trip_type),
+     group_size = COALESCE(?, group_size),
+     updated_at = NOW()
+   WHERE id=? AND user_id=?`,
+  [
+    tripData.tripName ?? null,
+    tripData.currency ?? null,
+    tripData.total_trip_cost ?? null,
+    tripData.trip_type ?? null,
+    tripData.group_size ?? null,
+    realTripId,
+    userId
+  ]
+);
+
 
     // delete old transport & save new
     await conn.execute(`DELETE FROM transport_info WHERE trip_id = ?`, [realTripId]);
