@@ -3,7 +3,7 @@ const passport = require('passport');
 const session = require('express-session');
 const cors = require('cors');
 const tripRoutes = require('./routes/tripRoutes')
-const nearbyRoute = require('./routes/nearby');
+const placesRoutes = require('./routes/places');
 
 require('dotenv').config();
 require('./config/passport');
@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: process.env.CLIENT_URL || 'http://localhost:5173', // แก้ไขให้ใช้ default fallback
   credentials: true
 }));
 
@@ -32,7 +32,8 @@ app.use(passport.session());
 
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/api/trip', require('./routes/tripRoutes'));
-app.use('/api/trip', tripRoutes);
-app.use('/api', nearbyRoute);
+// app.use('/api/trip', tripRoutes);
+// ✅ เพิ่ม Nearby API
+app.use('/api/places', require('./routes/places'));
 
 module.exports = app;

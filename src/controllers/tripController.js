@@ -4,7 +4,22 @@ const {callGeminiAPI} = require('../services/geminiService');
 exports.generateTripPlan = async (req, res) => {
   try {
     const tripData = req.body;
+
     const plan = await callGeminiAPI(tripData);
+    // 2️⃣ สำหรับแต่ละ location เรียก Gemini Nearby API
+    for (const day of plan.days) {
+      for (const loc of day.locations) {
+        try {
+          const nearbyRes = await axios.get(`http://localhost:5000/api/places/nearby`, {
+            params: { lat: loc.lat, lng: loc.lng, type: 'cafe', radius: 1000 }
+          });
+          loc.nearbyPlaces = nearbyRes.data; // เพิ่ม field nearbyPlaces
+        } catch (err) {
+          console.error('Failed to fetch nearby for', loc.name, err);
+          loc.nearbyPlaces = [];
+        }
+      }
+    }
     res.json(plan);
   } catch (err) {
     console.error('Gemini API error:', err);
