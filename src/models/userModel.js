@@ -25,5 +25,6 @@ exports.createUserIfNotExists = async (profile) => {
 
   // คืนค่า user ที่เพิ่งสร้างหรือมีอยู่แล้ว
   const [userRows] = await db.query('SELECT * FROM users WHERE id_google = ?', [profile.id]);
-return { user_id: userRows[0].user_id, ...userRows[0] };
+return userRows[0];
+;
 };
