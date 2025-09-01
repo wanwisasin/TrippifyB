@@ -40,11 +40,7 @@ exports.saveTripPlan = async (req, res) => {
       return res.status(400).json({ code: 'NO_DATA', message: 'Missing trip data.' });
     }
 
-    const result = await tripModel.saveTripPlan({
-  ...tripData,
-  trip_type: tripData.trip_type || 'solo',        
-  group_size: tripData.trip_type === 'group' ? tripData.group_size : null
-}, userId);
+   const result = await tripModel.saveTripPlan(tripData, userId);
 
 
     return res.status(201).json({
@@ -69,10 +65,7 @@ exports.updateTripPlan = async (req, res) => {
     }
 
 const result = await tripModel.updateTripPlan(tripId, {
-  ...tripData,
-  trip_type: tripData.trip_type || 'solo',
-  group_size: tripData.trip_type === 'group' ? tripData.group_size : null
-}, userId);
+  ...tripData,}, userId);
 
     return res.status(200).json({
       message: 'Trip updated successfully',
@@ -85,30 +78,29 @@ const result = await tripModel.updateTripPlan(tripId, {
 };
 exports.saveOrUpdateTrip = async (req, res) => {
   try {
-    const tripData = req.body;
     const userId = req.user?.user_id;
-    let tripId = tripData.id
-    console.log("Received trip data:", tripData); // <<< ดูทั้งหมด 
-    console.log("Trip ID:", tripId || "(new trip)"); // <<< ตรวจสอบ tripId
-
+    const tripData = req.body;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-
-    if (tripId) {
-      const result = await tripModel.updateTripPlan(tripData.tripId, tripData, userId);
-      tripId = result.id;
-      return res.json({ message: "Trip updated successfully", tripId });
+    let result;
+    if (!tripData.tripId) {
+      // INSERT: ใช้ model saveTripPlan
+      result = await tripModel.saveTripPlan(tripData, userId);
     } else {
-      // ✅ ไม่มี tripId → save ใหม่
-      const result = await tripModel.saveTripPlan(tripData, userId);
-      tripId = result.id;
-      return res.json({ message: "Trip saved successfully", tripId });
+      // UPDATE: ใช้ model updateTripPlan
+      result = await tripModel.updateTripPlan(tripData.tripId, tripData, userId);
     }
-  } catch (err) {
-    console.error("SaveOrUpdateTrip error:", err);
-    res.status(500).json({ message: "Failed to save or update trip" });
+
+    return res.json({
+      message: 'Trip saved successfully',
+      tripId: result.tripId,
+    });
+  } catch (error) {
+    console.error("SaveOrUpdateTrip error:", error);
+    return res.status(500).json({ message: "Error saving trip" });
   }
 };
+
 
 
 exports.joinTrip = async (req, res) => {

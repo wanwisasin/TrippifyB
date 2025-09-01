@@ -170,26 +170,29 @@ exports.saveTripPlan = async (tripData, userId) => {
   try {
     await conn.beginTransaction();
 
-    const [tripResult] = await conn.execute(
-      `INSERT INTO trips (user_id, trip_name, currency, total_trip_cost, trip_type, group_size, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+    const [result] = await conn.execute(
+      `INSERT INTO trips (user_id, trip_name, currency, total_trip_cost, trip_type, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         safeParam(userId),
         safeParam(tripData.tripName, 'My Trip'),
         safeParam(tripData.currency, 'THB'),
         safeParam(tripData.total_trip_cost, 0),
-        safeParam(tripData.trip_type, 'solo'),
-        safeParam(tripData.group_size, null)
+        'solo'
       ]
     );
 
-    const tripId = tripResult.insertId;
+    const tripId = result.insertId;
 
     await saveTransport(conn, tripId, tripData.transport_info, tripData.currency);
     await saveDaysAndLocations(conn, tripId, tripData);
 
     await conn.commit();
-    return { tripId };
+
+    // ดึง trip ใหม่แล้ว map field ให้ตรง frontend
+    const fullTrip = await exports.getTripById(tripId);
+    return fullTrip;
+
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -197,44 +200,41 @@ exports.saveTripPlan = async (tripData, userId) => {
     conn.release();
   }
 };
-
 exports.updateTripPlan = async (tripId, tripData, userId) => {
   const conn = await db.getConnection();
   const realTripId = safeParam(tripId || tripData?.id);
   try {
     await conn.beginTransaction();
 
-await conn.execute(
-  `UPDATE trips 
-   SET 
-     trip_name = COALESCE(?, trip_name),
-     currency = COALESCE(?, currency),
-     total_trip_cost = COALESCE(?, total_trip_cost),
-     trip_type = COALESCE(?, trip_type),
-     group_size = COALESCE(?, group_size),
-     updated_at = NOW()
-   WHERE id=? AND user_id=?`,
-  [
-    tripData.tripName ?? null,
-    tripData.currency ?? null,
-    tripData.total_trip_cost ?? null,
-    tripData.trip_type ?? null,
-    tripData.group_size ?? null,
-    realTripId,
-    userId
-  ]
-);
+    await conn.execute(
+      `UPDATE trips 
+       SET 
+         trip_name = COALESCE(?, trip_name),
+         currency = COALESCE(?, currency),
+         total_trip_cost = COALESCE(?, total_trip_cost),
+         trip_type = COALESCE(?, trip_type),
+         updated_at = NOW()
+       WHERE id=? AND user_id=?`,
+      [
+        tripData.tripName ?? null,
+        tripData.currency ?? null,
+        tripData.total_trip_cost ?? null,
+        'solo',
+        realTripId,
+        userId
+      ]
+    );
 
-
-    // delete old transport & save new
     await conn.execute(`DELETE FROM transport_info WHERE trip_id = ?`, [realTripId]);
     await saveTransport(conn, realTripId, tripData.transport_info, tripData.currency);
 
-    // save days & locations
     await saveDaysAndLocations(conn, realTripId, tripData);
 
     await conn.commit();
-    return { tripId: realTripId };
+
+    const fullTrip = await exports.getTripById(realTripId);
+    return fullTrip;
+
   } catch (err) {
     await conn.rollback();
     console.error("❌ updateTripPlan error:", err);
@@ -249,7 +249,7 @@ exports.getTripById = async (tripId) => {
   const conn = await db.getConnection();
   try {
     const [tripRows] = await conn.execute(
-      `SELECT id, trip_name, currency, total_trip_cost, trip_type, group_size, created_at, updated_at
+      `SELECT id AS tripId, trip_name, currency, total_trip_cost, trip_type, created_at, updated_at
        FROM trips WHERE id = ?`,
       [tripId]
     );
@@ -310,20 +310,19 @@ exports.getTripById = async (tripId) => {
 
 exports.getTripsByUser = async (userId) => {
   const [rows] = await db.execute(
-    `SELECT id, trip_name, currency, total_trip_cost, created_at, trip_type, group_size
+    `SELECT id AS tripId, trip_name, currency, total_trip_cost, trip_type,created_at
      FROM trips WHERE user_id = ?
      ORDER BY created_at DESC`,
     [userId]
   );
 
   return rows.map((row) => ({
-    _id: row.id,
+    tripId: row.tripId,
     tripName: row.trip_name,
     currency: row.currency,
     total_trip_cost: row.total_trip_cost,
-    createdAt: row.created_at,
     trip_type: row.trip_type,
-    group_size: row.group_size
+    createdAt: row.created_at,
   }));
 };
 exports.checkTripOwner = async (tripId, userId) => {
