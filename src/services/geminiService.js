@@ -11,9 +11,9 @@ Preferred mode of travel: ${data.travelType}
 Traveler's interests: ${data.preferences.join(', ') || 'general'}
 Trip name: ${data.tripName}
 
-⚠️ Include the type of trip and group size in the returned JSON:
+⚠️ Include the type of trip in the returned JSON:
 "trip_type": "${data.trip_type}",      // "solo" or "group"
-"group_size": ${data.group_size || null} // number if group, null if solo
+
 
 1. Provide a travel summary object named "transport_info" that estimates distance and travel time from "${data.from}" to "${data.to}" using each transportation method: "car", "bus", "train", "flight".
    - If a method is unavailable, use null.
