@@ -32,8 +32,6 @@ app.use(passport.session());
 
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/api/trip', require('./routes/tripRoutes'));
-// app.use('/api/trip', tripRoutes);
-// ✅ เพิ่ม Nearby API
 app.use('/api/places', require('./routes/places'));
-
+app.use('/api/expense',require('./routes/expenseRoutes') );
 module.exports = app;
