@@ -33,5 +33,6 @@ app.use(passport.session());
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/api/trip', require('./routes/tripRoutes'));
 app.use('/api/places', require('./routes/places'));
-app.use('/api/expense',require('./routes/expenseRoutes') );
+app.use('/api/expense',require('./routes/expenseRoutes'));
+app.use('/api/reviews',require('./routes/reviewRoutes'))
 module.exports = app;

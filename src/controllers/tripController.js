@@ -1,6 +1,5 @@
 const tripModel = require('../models/tripModel');
 const {callGeminiAPI} = require('../services/geminiService');
-const db = require('../utils/db');
 // 🔮 Generate Smart Trip Plan (Gemini)
 exports.generateTripPlan = async (req, res) => {
   try {
