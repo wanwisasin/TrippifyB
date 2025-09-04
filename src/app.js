@@ -2,8 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const session = require('express-session');
 const cors = require('cors');
-const tripRoutes = require('./routes/tripRoutes')
-const placesRoutes = require('./routes/places');
+
 
 require('dotenv').config();
 require('./config/passport');
@@ -32,7 +31,7 @@ app.use(passport.session());
 
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/api/trip', require('./routes/tripRoutes'));
-app.use('/api/places', require('./routes/places'));
+app.use('/api/places', require('./routes/nearbyRoutes'));
 app.use('/api/expense',require('./routes/expenseRoutes'));
 app.use('/api/reviews',require('./routes/reviewRoutes'))
 module.exports = app;
