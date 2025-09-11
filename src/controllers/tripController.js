@@ -57,7 +57,7 @@ exports.updateTripPlan = async (req, res) => {
     const tripId = req.params.tripId;
     const tripData = req.body;
 
-    // ตรวจสอบว่า trip นี้เป็นของ user นี้หรือไม่
+
     const isOwner = await tripModel.checkTripOwner(tripId, userId);
     if (!isOwner) {
       return res.status(403).json({ code: 'FORBIDDEN', message: 'You are not the owner of this trip' });
@@ -100,25 +100,26 @@ exports.saveOrUpdateTrip = async (req, res) => {
   }
 };
 
-
-
 exports.joinTrip = async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user?.user_id; // ต้อง login ก่อน
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
   try {
-    const userId = req.user.user_id;
-    const tripId = req.params.tripId;
+    // ตรวจสอบว่ามี trip นี้ไหม
+    const trip = await tripModel.getTripById(tripId);
+    if (!trip) return res.status(404).json({ error: "Trip not found" });
 
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-
-    const isMember = await tripModel.checkIfMember(tripId, userId);
-
-    if (!isMember) {
-      await tripModel.addMember(tripId, userId, 'member');
+    // เพิ่มเป็น member ถ้ายังไม่ใช่
+    const alreadyMember = await tripModel.checkIfMember(tripId, userId);
+    if (!alreadyMember) {
+      await tripModel.addMember(tripId, userId);
     }
 
-    res.json({ message: 'Joined the trip successfully' });
+    res.json({ message: "Joined trip successfully", tripId });
   } catch (err) {
-    console.error('Join trip error:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Join trip failed:", err);
+    res.status(500).json({ error: "Failed to join trip" });
   }
 };
 exports.getTripDetail = async (req, res) => {

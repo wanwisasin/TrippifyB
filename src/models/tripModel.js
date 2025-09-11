@@ -164,7 +164,6 @@ const saveDaysAndLocations = async (conn, tripId, tripData) => {
   }
 };
 
-// 💾 Save a full trip plan
 exports.saveTripPlan = async (tripData, userId) => {
   const conn = await db.getConnection();
   try {
@@ -184,6 +183,12 @@ exports.saveTripPlan = async (tripData, userId) => {
 
     const tripId = result.insertId;
 
+    // ✅ ใช้ conn.execute ไม่ใช่ db.query
+    await conn.execute(
+      `INSERT INTO trip_members (trip_id, user_id, role) VALUES (?, ?, ?)`,
+      [tripId, userId, "leader"]
+    );
+
     await saveTransport(conn, tripId, tripData.transport_info, tripData.currency);
     await saveDaysAndLocations(conn, tripId, tripData);
 
@@ -191,8 +196,7 @@ exports.saveTripPlan = async (tripData, userId) => {
 
     // ดึง trip ใหม่แล้ว map field ให้ตรง frontend
     const fullTrip = await exports.getTripById(tripId);
-    return fullTrip;
-
+    return { ...fullTrip, tripId };  // ✅ เผื่อ frontend ต้องใช้ tripId
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -200,6 +204,7 @@ exports.saveTripPlan = async (tripData, userId) => {
     conn.release();
   }
 };
+
 exports.updateTripPlan = async (tripId, tripData, userId) => {
   const conn = await db.getConnection();
   const realTripId = safeParam(tripId || tripData?.id);
@@ -326,25 +331,31 @@ exports.getTripsByUser = async (userId) => {
   }));
 };
 exports.checkTripOwner = async (tripId, userId) => {
-  const [rows] = await db.execute(
-    `SELECT user_id FROM trips WHERE id = ?`,
-    [tripId]
+  const [rows] = await db.query(
+    `SELECT * FROM trip_members WHERE trip_id = ? AND user_id = ? AND role = 'leader'`,
+    [tripId, userId]
   );
-  return rows.length > 0 && rows[0].user_id === userId;
+  return rows.length > 0;
 };
+
 exports.checkIfMember = async (tripId, userId) => {
-  const [rows] = await db.execute(
+  const [rows] = await db.query(
     `SELECT * FROM trip_members WHERE trip_id = ? AND user_id = ?`,
     [tripId, userId]
   );
   return rows.length > 0;
 };
 
-// 👥 เพิ่มสมาชิกเข้า trip
 exports.addMember = async (tripId, userId, role = 'member') => {
-  await db.execute(
-    `INSERT INTO trip_members (trip_id, user_id, role) VALUES (?, ?, ?)`,
-    [tripId, userId, role]
+  const [rows] = await db.query(
+    `SELECT 1 FROM trip_members WHERE trip_id = ? AND user_id = ?`,
+    [tripId, userId]
   );
+  if (rows.length === 0) {
+    await db.execute(
+      `INSERT INTO trip_members (trip_id, user_id, role) VALUES (?, ?, ?)`,
+      [tripId, userId, role]
+    );
+  }
 };
 
