@@ -125,15 +125,16 @@ exports.joinTrip = async (req, res) => {
 exports.getTripDetail = async (req, res) => {
   try {
     const tripId = req.params.tripId;
-    console.log("📌 tripId from request:", tripId);   // Debug ตรงนี้
+    console.log("📌 tripId from request:", tripId);
 
     const trip = await tripModel.getTripById(tripId);
-
     if (!trip) {
       return res.status(404).json({ code: 'NOT_FOUND', message: 'Trip not found' });
     }
 
-    return res.status(200).json(trip);
+    const userRole = await tripModel.checkUserRole(tripId, req.user?.user_id); 
+
+    return res.status(200).json({ trip, userRole });
   } catch (err) {
     console.error('Error fetching trip detail:', err);
     return res.status(500).json({ code: 'FETCH_ERROR', message: 'Internal server error' });

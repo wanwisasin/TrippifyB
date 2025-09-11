@@ -346,6 +346,7 @@ exports.checkIfMember = async (tripId, userId) => {
   return rows.length > 0;
 };
 
+
 exports.addMember = async (tripId, userId, role = 'member') => {
   const [rows] = await db.query(
     `SELECT 1 FROM trip_members WHERE trip_id = ? AND user_id = ?`,
@@ -358,4 +359,12 @@ exports.addMember = async (tripId, userId, role = 'member') => {
     );
   }
 };
+exports.checkUserRole = async (tripId, userId) => {
+  const isOwner = await this.checkTripOwner(tripId, userId);
+  if (isOwner) return 'leader';
 
+  const isMember = await this.checkIfMember(tripId, userId);
+  if (isMember) return 'member';
+
+  return null; // ยังไม่เข้าร่วม
+};
