@@ -250,13 +250,20 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
 };
 
 
-exports.getTripById = async (tripId) => {
+exports.getTripById = async (tripId,userId) => {
   const conn = await db.getConnection();
   try {
     const [tripRows] = await conn.execute(
-      `SELECT id AS tripId, trip_name, currency, total_trip_cost, trip_type, created_at, updated_at
-       FROM trips WHERE id = ?`,
-      [tripId]
+      `SELECT trips.id AS tripId, 
+      trips.trip_name, 
+      trips.currency, 
+      trips.total_trip_cost, 
+      trips.trip_type, 
+      trips.created_at, 
+      trips.updated_at, 
+      trip_members.role FROM trips 
+      LEFT JOIN trip_members ON trips.id = trip_members.trip_id AND trip_members.user_id = ? WHERE trips.id = ?`,
+      [userId ?? null, tripId ?? null]
     );
 
     if (tripRows.length === 0) return null;
@@ -315,10 +322,20 @@ exports.getTripById = async (tripId) => {
 
 exports.getTripsByUser = async (userId) => {
   const [rows] = await db.execute(
-    `SELECT id AS tripId, trip_name, currency, total_trip_cost, trip_type,created_at
-     FROM trips WHERE user_id = ?
-     ORDER BY created_at DESC`,
-    [userId]
+   `SELECT 
+       trips.id AS tripId, 
+       trips.trip_name, 
+       trips.currency, 
+       trips.total_trip_cost, 
+       trips.trip_type,
+       trips.created_at,
+       tm.role
+     FROM trips
+     LEFT JOIN trip_members tm 
+       ON trips.id = tm.trip_id AND tm.user_id = ?
+     WHERE trips.user_id = ?
+     ORDER BY trips.created_at DESC`,
+    [userId, userId]
   );
 
   return rows.map((row) => ({
@@ -328,6 +345,7 @@ exports.getTripsByUser = async (userId) => {
     total_trip_cost: row.total_trip_cost,
     trip_type: row.trip_type,
     createdAt: row.created_at,
+    role: row.role,
   }));
 };
 exports.checkTripOwner = async (tripId, userId) => {

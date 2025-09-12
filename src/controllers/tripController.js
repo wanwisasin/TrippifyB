@@ -125,13 +125,15 @@ exports.joinTrip = async (req, res) => {
 exports.getTripDetail = async (req, res) => {
   try {
     const tripId = req.params.tripId;
+    const userId = req.user?.user_id;
     console.log("📌 tripId from request:", tripId);   // Debug ตรงนี้
 
-    const trip = await tripModel.getTripById(tripId);
+    const trip = await tripModel.getTripById(tripId, userId);
 
     if (!trip) {
       return res.status(404).json({ code: 'NOT_FOUND', message: 'Trip not found' });
     }
+    console.log("📌 trip detail fetched:", JSON.stringify(trip, null, 2));
 
     return res.status(200).json(trip);
   } catch (err) {
