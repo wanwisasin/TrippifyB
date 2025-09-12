@@ -90,15 +90,16 @@ exports.saveOrUpdateTrip = async (req, res) => {
       result = await tripModel.updateTripPlan(tripData.tripId, tripData, userId);
     }
 
-    return res.json({
-      message: 'Trip saved successfully',
-      tripId: result.tripId,
-    });
+    // 👉 ดึงข้อมูล trip กลับมาพร้อม role
+    const tripWithRole = await tripModel.getTripById(result.tripId, userId);
+
+    return res.json(tripWithRole);
   } catch (error) {
     console.error("SaveOrUpdateTrip error:", error);
     return res.status(500).json({ message: "Error saving trip" });
   }
 };
+
 
 exports.joinTrip = async (req, res) => {
   const { tripId } = req.params;
