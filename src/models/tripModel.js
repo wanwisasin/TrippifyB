@@ -249,20 +249,24 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
   }
 };
 
-
-exports.getTripById = async (tripId,userId) => {
+exports.getTripById = async (tripId, userId) => {
   const conn = await db.getConnection();
   try {
     const [tripRows] = await conn.execute(
-      `SELECT trips.id AS tripId, 
-      trips.trip_name, 
-      trips.currency, 
-      trips.total_trip_cost, 
-      trips.trip_type, 
-      trips.created_at, 
-      trips.updated_at, 
-      trip_members.role FROM trips 
-      LEFT JOIN trip_members ON trips.id = trip_members.trip_id AND trip_members.user_id = ? WHERE trips.id = ?`,
+      `SELECT 
+          t.id AS tripId, 
+          t.trip_name, 
+          t.currency, 
+          t.total_trip_cost, 
+          t.trip_type, 
+          t.created_at, 
+          t.updated_at, 
+          tm.role
+       FROM trips t
+       LEFT JOIN trip_members tm 
+         ON t.id = tm.trip_id 
+        AND tm.user_id = ? 
+       WHERE t.id = ?`,
       [userId ?? null, tripId ?? null]
     );
 
@@ -276,7 +280,6 @@ exports.getTripById = async (tripId,userId) => {
       [tripId]
     );
 
-    // 🏞️ ดึง locations ของแต่ละ day
     for (const day of dayRows) {
       const [locRows] = await conn.execute(
         `SELECT id, name, category, transport, estimated_cost, currency, google_maps_url, lat, lng, distance_to_next
@@ -310,9 +313,19 @@ exports.getTripById = async (tripId,userId) => {
       };
     }
 
-    // ✅ ประกอบทั้งหมดเข้าด้วยกัน
+    // 👥 ดึงสมาชิกทั้งหมด
+    const [memberRows] = await conn.execute(
+      `SELECT u.user_id, u.username, tm.role
+       FROM trip_members tm
+       JOIN users u ON tm.user_id = u.user_id
+       WHERE tm.trip_id = ?`,
+      [tripId]
+    );
+
+    // ✅ ประกอบข้อมูลทั้งหมด
     trip.days = dayRows;
     trip.transport_info = transport_info;
+    trip.members = memberRows;  // [{user_id, username, role}, ...]
 
     return trip;
   } finally {
@@ -320,22 +333,27 @@ exports.getTripById = async (tripId,userId) => {
   }
 };
 
+
 exports.getTripsByUser = async (userId) => {
   const [rows] = await db.execute(
-   `SELECT 
-       trips.id AS tripId, 
-       trips.trip_name, 
-       trips.currency, 
-       trips.total_trip_cost, 
-       trips.trip_type,
-       trips.created_at,
-       tm.role
-     FROM trips
-     LEFT JOIN trip_members tm 
-       ON trips.id = tm.trip_id AND tm.user_id = ?
-     WHERE trips.user_id = ?
-     ORDER BY trips.created_at DESC`,
-    [userId, userId]
+    `SELECT 
+        t.id AS tripId,
+        t.trip_name,
+        t.currency,
+        t.total_trip_cost,
+        t.trip_type,
+        t.created_at,
+        tm.role,
+        GROUP_CONCAT(u.username) AS members
+     FROM trips t
+     JOIN trip_members tm ON t.id = tm.trip_id
+     JOIN users u ON tm.user_id = u.user_id
+     WHERE t.id IN (
+         SELECT trip_id FROM trip_members WHERE user_id = ?
+     )
+     GROUP BY t.id, tm.role
+     ORDER BY t.created_at DESC`,
+    [userId]
   );
 
   return rows.map((row) => ({
@@ -346,8 +364,10 @@ exports.getTripsByUser = async (userId) => {
     trip_type: row.trip_type,
     createdAt: row.created_at,
     role: row.role,
+    members: row.members ? row.members.split(",") : []
   }));
 };
+
 exports.checkTripOwner = async (tripId, userId) => {
   const [rows] = await db.query(
     `SELECT * FROM trip_members WHERE trip_id = ? AND user_id = ? AND role = 'leader'`,
