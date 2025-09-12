@@ -134,7 +134,6 @@ exports.getTripDetail = async (req, res) => {
       return res.status(404).json({ code: 'NOT_FOUND', message: 'Trip not found' });
     }
     console.log("📌 trip detail fetched:", JSON.stringify(trip, null, 2));
-
     return res.status(200).json(trip);
   } catch (err) {
     console.error('Error fetching trip detail:', err);
