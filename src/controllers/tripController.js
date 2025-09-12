@@ -126,7 +126,7 @@ exports.getTripDetail = async (req, res) => {
   try {
     const tripId = req.params.tripId;
     const userId = req.user?.user_id;
-    console.log("📌 tripId from request:", tripId);   // Debug ตรงนี้
+    console.log("📌 tripId from request:", tripId);
 
     const trip = await tripModel.getTripById(tripId, userId);
 
