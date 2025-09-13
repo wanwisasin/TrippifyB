@@ -177,8 +177,7 @@ exports.saveTripPlan = async (tripData, userId) => {
         safeParam(tripData.tripName, 'My Trip'),
         safeParam(tripData.currency, 'THB'),
         safeParam(tripData.total_trip_cost, 0),
-        'solo'
-      ]
+        safeParam(tripData.trip_type)      ]
     );
 
     const tripId = result.insertId;
@@ -224,7 +223,7 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
         tripData.tripName ?? null,
         tripData.currency ?? null,
         tripData.total_trip_cost ?? null,
-        'solo',
+        tripData.trip_type ?? null,
         realTripId,
         userId
       ]

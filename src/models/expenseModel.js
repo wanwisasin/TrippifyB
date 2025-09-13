@@ -28,7 +28,9 @@ exports.getExpensesByTrip = async (tripId) => {
   );
   return rows.map(e => ({
     ...e,
-    split_with: JSON.parse(e.split_with || "[]")
+    paidBy: e.paid_by,       
+    isPaid: e.is_paid === 1,         
+    splitWith: JSON.parse(e.split_with || "[]")
   }));
 };
 

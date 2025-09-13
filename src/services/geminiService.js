@@ -12,7 +12,7 @@ Traveler's interests: ${data.preferences.join(', ') || 'general'}
 Trip name: ${data.tripName}
 
 ⚠️ Include the type of trip in the returned JSON:
-"trip_type": "${data.trip_type}",      // "solo" or "group"
+"trip_type": "${data.trip_type}",
 
 
 1. Provide a travel summary object named "transport_info" that estimates distance and travel time from "${data.from}" to "${data.to}" using each transportation method: "car", "bus", "train", "flight".
