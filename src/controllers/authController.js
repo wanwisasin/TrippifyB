@@ -14,15 +14,5 @@ exports.logout = (req, res, next) => {
     });
   });
 };
-exports.googleCallback = async (req, res) => {
-  try {
-    const userData = req.user;
-    console.log('✅ Google User:', userData); // ⬅️ ตรวจค่าที่ได้
-    res.redirect(process.env.CLIENT_URL);
-  } catch (err) {
-    console.error('🔥 Error during user save:', err); // ⬅️ ดู log error
-    res.redirect('/auth/failure');
-  }
-};
 
 
