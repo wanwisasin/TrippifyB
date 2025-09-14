@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { getNearbyPlaces } = require("../controllers/nearbyController");
+const nearbyController = require("../controllers/nearbyController");
 
-router.get("/nearby", getNearbyPlaces);
-
+router.get("/nearby", nearbyController.getNearbyPlaces);
+router.get("/search", nearbyController.searchPlaces);
 module.exports = router;
