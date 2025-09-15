@@ -325,7 +325,7 @@ trip.how_to_get_there = howToGetThere; // ✅ assign ให้ frontend ใช�
 
     // 👥 ดึงสมาชิกทั้งหมด
     const [memberRows] = await conn.execute(
-      `SELECT u.user_id, u.username,u.gmail, tm.role 
+      `SELECT u.user_id, u.username,u.gmail, u.photo, tm.role 
        FROM trip_members tm
        JOIN users u ON tm.user_id = u.user_id
        WHERE tm.trip_id = ?`,

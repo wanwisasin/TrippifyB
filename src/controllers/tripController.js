@@ -1,5 +1,5 @@
 const tripModel = require('../models/tripModel');
-const {callGeminiAPI} = require('../services/geminiService');
+const { callGeminiAPI } = require('../services/geminiService');
 // 🔮 Generate Smart Trip Plan (Gemini)
 exports.generateTripPlan = async (req, res) => {
   try {
@@ -39,7 +39,7 @@ exports.saveTripPlan = async (req, res) => {
       return res.status(400).json({ code: 'NO_DATA', message: 'Missing trip data.' });
     }
 
-   const result = await tripModel.saveTripPlan(tripData, userId);
+    const result = await tripModel.saveTripPlan(tripData, userId);
 
 
     return res.status(201).json({
@@ -63,8 +63,9 @@ exports.updateTripPlan = async (req, res) => {
       return res.status(403).json({ code: 'FORBIDDEN', message: 'You are not the owner of this trip' });
     }
 
-const result = await tripModel.updateTripPlan(tripId, {
-  ...tripData,}, userId);
+    const result = await tripModel.updateTripPlan(tripId, {
+      ...tripData,
+    }, userId);
 
     return res.status(200).json({
       message: 'Trip updated successfully',
@@ -133,15 +134,16 @@ exports.getTripDetail = async (req, res) => {
 
     if (!trip) {
       return res.status(404).json({ code: 'NOT_FOUND', message: 'Trip not found' });
+
     }
     console.log("📌 trip detail fetched:", JSON.stringify(trip, null, 2));
     return res.status(200).json(trip);
   } catch (err) {
     console.error('Error fetching trip detail:', err);
+
     return res.status(500).json({ code: 'FETCH_ERROR', message: 'Internal server error' });
   }
 };
-
 exports.getUserTrips = async (req, res) => {
   try {
     const userId = req.user?.user_id;
@@ -150,11 +152,20 @@ exports.getUserTrips = async (req, res) => {
       return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Not logged in' });
     }
 
-    const trips = await tripModel.getTripsByUser(userId);
+    // ดึง tripId ของ user
+    const userTrips = await tripModel.getTripsByUser(userId); // สมมติว่า function นี้ return array ของ tripId หรือ basic info
 
-    return res.status(200).json(trips);
+    // map แต่ละ tripId ไปเรียก getTripById เหมือน tripDetail
+    const tripDetails = await Promise.all(
+      userTrips.map(async (trip) => {
+        const tripDetail = await tripModel.getTripById(trip.tripId, userId);
+        return tripDetail;
+      })
+    );
+
+    return res.status(200).json(tripDetails);
   } catch (err) {
     console.error('Get user trips error:', err);
-    return res.status(500).json({ message: 'Failed to fetch user trips' });
+    return res.status(500).json({ code: 'FETCH_ERROR', message: 'Failed to fetch user trips' });
   }
 };
