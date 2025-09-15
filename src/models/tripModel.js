@@ -21,19 +21,20 @@ const formatDate = (isoString) => {
   return isoString.split("T")[0];
 };
 // helper: save transport
-const saveTransport = async (conn, tripId, transportInfo = {}, currency = 'THB') => {
+const saveTransport = async (conn, tripId, transportInfo = {}, currency = 'THB', howToGetThere = null) => {
   const realTripId = safeParam(tripId);
   for (const mode of ['car', 'bus', 'train', 'flight']) {
     if (transportInfo[mode]) {
       const dist = parseDistance(transportInfo[mode].distance);
       await conn.execute(
-        `INSERT INTO transport_info (trip_id, mode, distance, duration, created_at)
-         VALUES (?, ?, ?, ?, NOW())`,
+        `INSERT INTO transport_info (trip_id, mode, distance, duration , how_to_get_there, created_at)
+         VALUES (?, ?, ?,?, ?, NOW())`,
         [
           realTripId,
           mode,
           dist,
-          safeParam(transportInfo[mode].duration, '')
+          safeParam(transportInfo[mode].duration, ''),
+          safeParam(howToGetThere, '')
         ]
       );
     }
@@ -188,7 +189,7 @@ exports.saveTripPlan = async (tripData, userId) => {
       [tripId, userId, "leader"]
     );
 
-    await saveTransport(conn, tripId, tripData.transport_info, tripData.currency);
+    await saveTransport(conn, tripId, tripData.transport_info, tripData.currency,tripData.how_to_get_there);
     await saveDaysAndLocations(conn, tripId, tripData);
 
     await conn.commit();
@@ -230,7 +231,7 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
     );
 
     await conn.execute(`DELETE FROM transport_info WHERE trip_id = ?`, [realTripId]);
-    await saveTransport(conn, realTripId, tripData.transport_info, tripData.currency);
+    await saveTransport(conn, realTripId, tripData.transport_info, tripData.currency,tripData.how_to_get_there);
 
     await saveDaysAndLocations(conn, realTripId, tripData);
 
@@ -298,19 +299,29 @@ exports.getTripById = async (tripId, userId) => {
         day.daily_tips = [];
       }
     }
+const [transportRows] = await conn.execute(
+  `SELECT mode, distance, duration, how_to_get_there 
+   FROM transport_info WHERE trip_id = ?`,
+  [tripId]
+);
 
-    // 🚍 ดึง transport
-    const [transportRows] = await conn.execute(
-      `SELECT mode, distance, duration FROM transport_info WHERE trip_id = ?`,
-      [tripId]
-    );
-    const transport_info = {};
-    for (const t of transportRows) {
-      transport_info[t.mode] = {
-        distance: t.distance,
-        duration: t.duration,
-      };
-    }
+const transport_info = {};
+let howToGetThere = null;
+
+for (const t of transportRows) {
+  transport_info[t.mode] = {
+    distance: t.distance,
+    duration: t.duration,
+  };
+  if (t.how_to_get_there && !howToGetThere) {
+    howToGetThere = t.how_to_get_there; 
+  }
+}
+
+trip.transport_info = transport_info;
+trip.how_to_get_there = howToGetThere; // ✅ assign ให้ frontend ใช้
+
+
 
     // 👥 ดึงสมาชิกทั้งหมด
     const [memberRows] = await conn.execute(
@@ -324,6 +335,7 @@ exports.getTripById = async (tripId, userId) => {
     // ✅ ประกอบข้อมูลทั้งหมด
     trip.days = dayRows;
     trip.transport_info = transport_info;
+    trip.how_to_get_there = howToGetThere;
     trip.members = memberRows;  // [{user_id, username, role}, ...]
 
     return trip;

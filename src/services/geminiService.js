@@ -4,9 +4,9 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const generateTripPrompt = (data) => {
   return `
-Plan a travel itinerary from ${data.from} to ${data.to}  
-Travel dates: from ${data.startDate} to ${data.endDate}  
-Total budget: ${data.budget} ${data.currency || 'USD'}  
+Plan a travel itinerary only in ${data.to} province.
+Travel dates: from ${data.startDate} to ${data.endDate}  (Must be completed every day)
+Total budget: ${data.budget} ${data.currency}
 Preferred mode of travel: ${data.travelType}  
 Traveler's interests: ${data.preferences.join(', ') || 'general'}
 Trip name: ${data.tripName}
@@ -24,7 +24,8 @@ Trip name: ${data.tripName}
        "train": { "distance": "xxx km", "duration": "x hr" } or null,
        "flight": { "distance": "xxx km", "duration": "x hr" } or null
      }
-
+   Also include:
+     "how_to_get_there": text explanation of options (van, bus, plane, self-driving with fuel cost  from "${data.from}" to "${data.to}"as available.
 2. Divide the trip into daily plans (Day 1, Day 2, etc.)
    ⚠️ Return the daily plan array under the property name "days".
 
