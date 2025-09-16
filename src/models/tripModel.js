@@ -178,7 +178,7 @@ exports.saveTripPlan = async (tripData, userId) => {
         safeParam(tripData.tripName, 'My Trip'),
         safeParam(tripData.currency, 'THB'),
         safeParam(tripData.total_trip_cost, 0),
-        safeParam(tripData.trip_type)      ]
+        safeParam(tripData.trip_type)]
     );
 
     const tripId = result.insertId;
@@ -189,7 +189,7 @@ exports.saveTripPlan = async (tripData, userId) => {
       [tripId, userId, "leader"]
     );
 
-    await saveTransport(conn, tripId, tripData.transport_info, tripData.currency,tripData.how_to_get_there);
+    await saveTransport(conn, tripId, tripData.transport_info, tripData.currency, tripData.how_to_get_there);
     await saveDaysAndLocations(conn, tripId, tripData);
 
     await conn.commit();
@@ -231,7 +231,7 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
     );
 
     await conn.execute(`DELETE FROM transport_info WHERE trip_id = ?`, [realTripId]);
-    await saveTransport(conn, realTripId, tripData.transport_info, tripData.currency,tripData.how_to_get_there);
+    await saveTransport(conn, realTripId, tripData.transport_info, tripData.currency, tripData.how_to_get_there);
 
     await saveDaysAndLocations(conn, realTripId, tripData);
 
@@ -299,27 +299,27 @@ exports.getTripById = async (tripId, userId) => {
         day.daily_tips = [];
       }
     }
-const [transportRows] = await conn.execute(
-  `SELECT mode, distance, duration, how_to_get_there 
+    const [transportRows] = await conn.execute(
+      `SELECT mode, distance, duration, how_to_get_there 
    FROM transport_info WHERE trip_id = ?`,
-  [tripId]
-);
+      [tripId]
+    );
 
-const transport_info = {};
-let howToGetThere = null;
+    const transport_info = {};
+    let howToGetThere = null;
 
-for (const t of transportRows) {
-  transport_info[t.mode] = {
-    distance: t.distance,
-    duration: t.duration,
-  };
-  if (t.how_to_get_there && !howToGetThere) {
-    howToGetThere = t.how_to_get_there; 
-  }
-}
+    for (const t of transportRows) {
+      transport_info[t.mode] = {
+        distance: t.distance,
+        duration: t.duration,
+      };
+      if (t.how_to_get_there && !howToGetThere) {
+        howToGetThere = t.how_to_get_there;
+      }
+    }
 
-trip.transport_info = transport_info;
-trip.how_to_get_there = howToGetThere; // ✅ assign ให้ frontend ใช้
+    trip.transport_info = transport_info;
+    trip.how_to_get_there = howToGetThere; // ✅ assign ให้ frontend ใช้
 
 
 
@@ -344,7 +344,6 @@ trip.how_to_get_there = howToGetThere; // ✅ assign ให้ frontend ใช�
   }
 };
 
-
 exports.getTripsByUser = async (userId) => {
   const [rows] = await db.execute(
     `SELECT 
@@ -354,17 +353,19 @@ exports.getTripsByUser = async (userId) => {
         t.total_trip_cost,
         t.trip_type,
         t.created_at,
-        tm.role,
+        (SELECT tm.role 
+           FROM trip_members tm 
+          WHERE tm.trip_id = t.id AND tm.user_id = ?) AS role,
         GROUP_CONCAT(u.username) AS members
      FROM trips t
-     JOIN trip_members tm ON t.id = tm.trip_id
-     JOIN users u ON tm.user_id = u.user_id
+     JOIN trip_members tm2 ON t.id = tm2.trip_id
+     JOIN users u ON tm2.user_id = u.user_id
      WHERE t.id IN (
          SELECT trip_id FROM trip_members WHERE user_id = ?
      )
-     GROUP BY t.id, tm.role
-     ORDER BY t.created_at DESC`,
-    [userId]
+     GROUP BY t.id
+     ORDER BY t.created_at DESC;`,
+    [userId, userId]  // ✅ ต้องใส่สองค่า
   );
 
   return rows.map((row) => ({
