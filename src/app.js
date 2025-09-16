@@ -20,10 +20,13 @@ app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    maxAge: 24 * 60 * 60 * 1000,
-    secure: false,
-  }
+cookie: {
+  maxAge: 24 * 60 * 60 * 1000,
+  secure: process.env.NODE_ENV === 'production', // true บน production
+  httpOnly: true,
+  sameSite: 'none' // 👈 สำคัญถ้า client ต่าง origin
+}
+
 }));
 
 app.use(passport.initialize());
