@@ -9,21 +9,28 @@ router.get('/google', (req, res, next) => {
   next();
 }, passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-router.get(
-  '/google/callback',
-  passport.authenticate('google', { 
-    failureRedirect: '/auth/failure', // ถ้าล็อกอินไม่สำเร็จ ให้ redirect ไปที่ failure route
-  }),
-  (req, res) => {
-    // โค้ดส่วนนี้จะทำงาน **เฉพาะเมื่อล็อกอินสำเร็จเท่านั้น**
-    // ในจุดนี้ req.user จะมีข้อมูลผู้ใช้และ Session ก็พร้อมใช้งานแล้ว
-    const finalRedirect = req.session.redirectTo || process.env.CLIENT_URL;
-    delete req.session.redirectTo; // ลบค่า redirect ออกจาก session
-    res.redirect(finalRedirect);
-  }
-);
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', (err, user, info) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!user) return res.status(401).json({ message: 'Authentication failed', info });
 
+    // 👉 เก็บค่า redirectTo ไว้ก่อน เพราะเดี๋ยว logIn จะเขียน session ใหม่
+    const redirectTo = req.session.redirectTo || process.env.CLIENT_URL;
 
+    req.logIn(user, (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      console.log("📌 Session after login:", req.session);
+
+      // 👉 ใส่กลับเข้าไปใน session ใหม่
+      req.session.redirectTo = redirectTo;
+
+      const finalRedirect = req.session.redirectTo || process.env.CLIENT_URL;
+      delete req.session.redirectTo;
+      return res.redirect(finalRedirect);
+    });
+  })(req, res, next);
+});
 
 router.get('/logout', authController.logout);
 router.get('/user', authController.getUser);
