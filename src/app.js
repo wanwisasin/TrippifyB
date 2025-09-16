@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'https://trippify.onrender.com', // แก้ไขให้ใช้ default fallback
+  origin: 'https://trippify.onrender.com', // แก้ไขให้ใช้ default fallback
   credentials: true
 }));
 
