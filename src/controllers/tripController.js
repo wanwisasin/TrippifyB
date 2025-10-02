@@ -1,19 +1,17 @@
 const tripModel = require('../models/tripModel');
 const { callGeminiAPI } = require('../services/geminiService');
-// 🔮 Generate Smart Trip Plan (Gemini)
 exports.generateTripPlan = async (req, res) => {
   try {
     const tripData = req.body;
 
     const plan = await callGeminiAPI(tripData);
-    // 2️⃣ สำหรับแต่ละ location เรียก Gemini Nearby API
     for (const day of plan.days) {
       for (const loc of day.locations) {
         try {
           const nearbyRes = await axios.get(`http://localhost:5000/api/places/nearby`, {
             params: { lat: loc.lat, lng: loc.lng, type: 'cafe', radius: 1000 }
           });
-          loc.nearbyPlaces = nearbyRes.data; // เพิ่ม field nearbyPlaces
+          loc.nearbyPlaces = nearbyRes.data;
         } catch (err) {
           console.error('Failed to fetch nearby for', loc.name, err);
           loc.nearbyPlaces = [];
@@ -84,14 +82,11 @@ exports.saveOrUpdateTrip = async (req, res) => {
 
     let result;
     if (!tripData.tripId) {
-      // INSERT: ใช้ model saveTripPlan
       result = await tripModel.saveTripPlan(tripData, userId);
     } else {
-      // UPDATE: ใช้ model updateTripPlan
       result = await tripModel.updateTripPlan(tripData.tripId, tripData, userId);
     }
 
-    // 👉 ดึงข้อมูล trip กลับมาพร้อม role
     const tripWithRole = await tripModel.getTripById(result.tripId, userId);
 
     return res.json(tripWithRole);
@@ -108,11 +103,9 @@ exports.joinTrip = async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    // ตรวจสอบว่ามี trip นี้ไหม
     const trip = await tripModel.getTripById(tripId);
     if (!trip) return res.status(404).json({ error: "Trip not found" });
 
-    // เพิ่มเป็น member ถ้ายังไม่ใช่
     const alreadyMember = await tripModel.checkIfMember(tripId, userId);
     if (!alreadyMember) {
       await tripModel.addMember(tripId, userId);
@@ -152,10 +145,7 @@ exports.getUserTrips = async (req, res) => {
       return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Not logged in' });
     }
 
-    // ดึง tripId ของ user
-    const userTrips = await tripModel.getTripsByUser(userId); // สมมติว่า function นี้ return array ของ tripId หรือ basic info
-
-    // map แต่ละ tripId ไปเรียก getTripById เหมือน tripDetail
+    const userTrips = await tripModel.getTripsByUser(userId); 
     const tripDetails = await Promise.all(
       userTrips.map(async (trip) => {
         const tripDetail = await tripModel.getTripById(trip.tripId, userId);

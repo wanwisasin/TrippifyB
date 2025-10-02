@@ -15,7 +15,7 @@ exports.getNearbyPlaces = async (req, res) => {
   }
 
   try {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY; // ✅ แก้แล้ว
+const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&key=${apiKey}`;
     const response = await axios.get(url);
 
@@ -37,12 +37,20 @@ exports.getNearbyPlaces = async (req, res) => {
 };
 
 exports.searchPlaces = async (req, res) => {
-  const { query } = req.query;
-  console.log("Search API called with:", { query });
+  const { query, to_location } = req.query;
+  console.log("Search API called with:", { query, to_location });
 
-  if (!query) return res.status(400).json({ error: "Missing query" });
+  if (!to_location) {
+    return res.status(400).json({ error: "Missing to_location" });
+  }
 
-  const cacheKey = `search-${query}`;
+  // ถ้า user ไม่พิมพ์ query -> ใช้ค่า default เช่น "places"
+  const userQuery = query && query.trim() ? query : "places";
+
+  // ✅ ต่อ query ให้หาภายในจังหวัดเสมอ
+  const searchQuery = `${userQuery} in ${to_location}`;
+
+  const cacheKey = `search-${searchQuery}`;
   if (cache.has(cacheKey) && cache.get(cacheKey).expires > Date.now()) {
     return res.json({ places: cache.get(cacheKey).data });
   }
@@ -50,7 +58,7 @@ exports.searchPlaces = async (req, res) => {
   try {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
-      query
+      searchQuery
     )}&key=${apiKey}`;
 
     const response = await axios.get(url);
@@ -65,9 +73,10 @@ exports.searchPlaces = async (req, res) => {
 
     cache.set(cacheKey, { expires: Date.now() + TTL, data: places });
     console.log("Search data returned:", places.length);
-    res.json({ places }); // ✅ ส่งเป็น object
+    res.json({ places });
   } catch (err) {
     console.error("Search API error:", err.message);
     res.status(500).json({ error: "Failed to fetch search places" });
   }
 };
+

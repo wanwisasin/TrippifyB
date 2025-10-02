@@ -13,6 +13,9 @@ Trip name: ${data.tripName}
 
 ⚠️ Include the type of trip in the returned JSON:
 "trip_type": "${data.trip_type}",
+"from_location" : "${data.from}"
+"to_location" : "${data.to}"
+
 
 
 1. Provide a travel summary object named "transport_info" that estimates distance and travel time from "${data.from}" to "${data.to}" using each transportation method: "car", "bus", "train", "flight".
@@ -25,7 +28,7 @@ Trip name: ${data.tripName}
        "flight": { "distance": "xxx km", "duration": "x hr" } or null
      }
    Also include:
-     "how_to_get_there": text explanation of options (van, bus, plane, self-driving with fuel cost  from "${data.from}" to "${data.to}"as available.
+     "how_to_get_there": text explanation of options (van, bus, plane, self-driving with fuel cost  from "${data.from}" to "${data.to}"as available.(in brief)
 2. Divide the trip into daily plans (Day 1, Day 2, etc.)
    ⚠️ Return the daily plan array under the property name "days".
    - Each day must be filled (no empty travel days).  
@@ -52,7 +55,7 @@ Return ONLY a valid JSON object starting with "{" and ending with "}", nothing e
 
 const callGeminiAPI = async (tripData) => {
   const prompt = generateTripPrompt(tripData);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const result = await model.generateContent(prompt);
   const response = await result.response;

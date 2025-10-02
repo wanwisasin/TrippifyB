@@ -171,14 +171,17 @@ exports.saveTripPlan = async (tripData, userId) => {
     await conn.beginTransaction();
 
     const [result] = await conn.execute(
-      `INSERT INTO trips (user_id, trip_name, currency, total_trip_cost, trip_type, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+      `INSERT INTO trips (user_id, trip_name, currency, total_trip_cost, trip_type,from_location,to_location, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?,?,?, NOW(), NOW())`,
       [
         safeParam(userId),
         safeParam(tripData.tripName, 'My Trip'),
         safeParam(tripData.currency, 'THB'),
         safeParam(tripData.total_trip_cost, 0),
-        safeParam(tripData.trip_type)]
+        safeParam(tripData.trip_type),
+        safeParam(tripData.from_location),
+        safeParam(tripData.to_location)
+      ]
     );
 
     const tripId = result.insertId;
@@ -218,6 +221,8 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
          currency = COALESCE(?, currency),
          total_trip_cost = COALESCE(?, total_trip_cost),
          trip_type = COALESCE(?, trip_type),
+         from_location = COALESCE(?, from_location),
+         to_location = COALESCE(?, to_location),
          updated_at = NOW()
        WHERE id=? AND user_id=?`,
       [
@@ -225,6 +230,8 @@ exports.updateTripPlan = async (tripId, tripData, userId) => {
         tripData.currency ?? null,
         tripData.total_trip_cost ?? null,
         tripData.trip_type ?? null,
+        tripData.from_location ?? null,
+        tripData.to_location ?? null,
         realTripId,
         userId
       ]
@@ -259,6 +266,8 @@ exports.getTripById = async (tripId, userId) => {
           t.currency, 
           t.total_trip_cost, 
           t.trip_type, 
+          t.from_location,
+          t.to_location,
           t.created_at, 
           t.updated_at, 
           tm.role
@@ -352,6 +361,8 @@ exports.getTripsByUser = async (userId) => {
         t.currency,
         t.total_trip_cost,
         t.trip_type,
+        t.from_location,
+        t.to_location,
         t.created_at,
         (SELECT tm.role 
            FROM trip_members tm 
@@ -365,7 +376,7 @@ exports.getTripsByUser = async (userId) => {
      )
      GROUP BY t.id
      ORDER BY t.created_at DESC;`,
-    [userId, userId]  // ✅ ต้องใส่สองค่า
+    [userId, userId]
   );
 
   return rows.map((row) => ({
@@ -374,6 +385,8 @@ exports.getTripsByUser = async (userId) => {
     currency: row.currency,
     total_trip_cost: row.total_trip_cost,
     trip_type: row.trip_type,
+    from_location: row.from_location,
+    to_location: row.to_location,
     createdAt: row.created_at,
     role: row.role,
     members: row.members ? row.members.split(",") : []
