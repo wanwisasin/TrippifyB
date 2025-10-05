@@ -44,10 +44,8 @@ exports.searchPlaces = async (req, res) => {
     return res.status(400).json({ error: "Missing to_location" });
   }
 
-  // ถ้า user ไม่พิมพ์ query -> ใช้ค่า default เช่น "places"
   const userQuery = query && query.trim() ? query : "places";
 
-  // ✅ ต่อ query ให้หาภายในจังหวัดเสมอ
   const searchQuery = `${userQuery} in ${to_location}`;
 
   const cacheKey = `search-${searchQuery}`;
