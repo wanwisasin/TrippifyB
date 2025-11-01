@@ -7,6 +7,7 @@ passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   callbackURL: process.env.GOOGLE_CALLBACK_URL,
+  scope: ['profile', 'email'] 
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     // ตรวจสอบว่าผู้ใช้มีในระบบหรือยัง ไม่มีก็สร้าง
