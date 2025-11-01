@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: process.env.CLIENT_URL || "http://localhost:5173",
   credentials: true
 }));
 
@@ -22,7 +22,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
-    secure: false,
+    secure: true,     
+    sameSite: 'none'   
   }
 }));
 
@@ -32,6 +33,6 @@ app.use(passport.session());
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/api/trip', require('./routes/tripRoutes'));
 app.use('/api/places', require('./routes/nearbyRoutes'));
-app.use('/api/expense',require('./routes/expenseRoutes'));
-app.use('/api/reviews',require('./routes/reviewRoutes'))
+app.use('/api/expense', require('./routes/expenseRoutes'));
+app.use('/api/reviews', require('./routes/reviewRoutes'))
 module.exports = app;
