@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  origin: process.env.CLIENT_URL,
   credentials: true
 }));
 
@@ -22,9 +22,11 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
-    secure: isProduction,       
-    sameSite: isProduction ? 'none' : 'lax', 
+    secure: true,     // ต้อง HTTPS
+    sameSite: 'none', // ต้อง HTTPS
+    httpOnly: true
   }
+
 }));
 
 app.use(passport.initialize());
