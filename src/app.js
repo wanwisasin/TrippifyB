@@ -2,12 +2,12 @@ const express = require('express');
 const passport = require('passport');
 const session = require('express-session');
 const cors = require('cors');
-const isProduction = process.env.NODE_ENV === 'production';
 
 require('dotenv').config();
 require('./config/passport');
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(express.json());
 
@@ -15,17 +15,19 @@ app.use(cors({
   origin: process.env.CLIENT_URL,
   credentials: true
 }));
+app.set('trust proxy', 1);
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
+    httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
-    secure: true,     // ต้อง HTTPS
-    sameSite: 'none', // ต้อง HTTPS
-    httpOnly: true
+    secure: isProduction,                   // ✅ only secure in production
+    sameSite: isProduction ? 'none' : 'lax' // ✅ fix cookie blocked cross-site
   }
+
 
 }));
 
