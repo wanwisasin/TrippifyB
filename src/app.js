@@ -2,7 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const session = require('express-session');
 const cors = require('cors');
-
+const isProduction = process.env.NODE_ENV === 'production';
 
 require('dotenv').config();
 require('./config/passport');
@@ -22,8 +22,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
-    secure: true,     
-    sameSite: 'none'   
+    secure: isProduction,       
+    sameSite: isProduction ? 'none' : 'lax', 
   }
 }));
 
