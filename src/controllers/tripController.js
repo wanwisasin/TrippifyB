@@ -1,14 +1,18 @@
+require('dotenv').config();
+const axios = require('axios');
 const tripModel = require('../models/tripModel');
 const { callGeminiAPI } = require('../services/geminiService');
+
 exports.generateTripPlan = async (req, res) => {
   try {
     const tripData = req.body;
 
     const plan = await callGeminiAPI(tripData);
+    const API_URL = process.env.VITE_API_URL;
     for (const day of plan.days) {
       for (const loc of day.locations) {
         try {
-          const nearbyRes = await axios.get(`http://localhost:5000/api/places/nearby`, {
+          const nearbyRes = await axios.get(`${API_URL}/api/places/nearby`, {
             params: { lat: loc.lat, lng: loc.lng, type: 'cafe', radius: 1000 }
           });
           loc.nearbyPlaces = nearbyRes.data;
@@ -145,7 +149,7 @@ exports.getUserTrips = async (req, res) => {
       return res.status(401).json({ code: 'UNAUTHORIZED', message: 'Not logged in' });
     }
 
-    const userTrips = await tripModel.getTripsByUser(userId); 
+    const userTrips = await tripModel.getTripsByUser(userId);
     const tripDetails = await Promise.all(
       userTrips.map(async (trip) => {
         const tripDetail = await tripModel.getTripById(trip.tripId, userId);
